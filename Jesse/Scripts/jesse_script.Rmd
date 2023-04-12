@@ -52,7 +52,7 @@ library(readr)
 ## Reading in Our Data
 
 ```{r Reading in Our Data}
-ca_provinces <- geojsonio::geojson_read(here("Jesse", "Data", "ca_provinces.geojson"), what="sp")
+ca_provinces <- geojsonio::geojson_read(here("Jesse", "Data", "provinces.geojson"), what="sp")
 
 us_states <- geojsonio::geojson_read("https://rstudio.github.io/leaflet/json/us-states.geojson", what = "sp")
 
@@ -72,7 +72,7 @@ birds_joined$date <- paste(birds_joined$Month, birds_joined$Day, birds_joined$Ye
 
 state_labels <- us_states$name
 
-province_labels <- ca_provinces$name
+province_labels <- ca_provinces$prov_name_en
 ```
 
 ## Leaflet Map Visualization
