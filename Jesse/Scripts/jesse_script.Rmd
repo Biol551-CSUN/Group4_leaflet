@@ -1,0 +1,145 @@
+---
+title: "Jesse Script"
+author: "Jesse G Jones"
+date: "2023-04-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Sources & Credits! - Click the Links Below
+
+##### [Tidy Tuesday Bird FeederWatch - 2023-01-10](https://github.com/rfordatascience/tidytuesday/blob/master/data/2023/2023-01-10/readme.md)
+
+##### [Data Source - FeederWatch](https://feederwatch.org/explore/raw-dataset-requests/)
+
+##### [Article - Over 30 Years of Standardized Bird Counts at Supplementary Feeding Stations in North America: A Citizen Science Data Report for Project FeederWatch](https://www.frontiersin.org/articles/10.3389/fevo.2021.619682/full)
+
+##### [TidyTuesday Repository](https://github.com/rfordatascience/tidytuesday)
+
+##### [Webpage with Canadian Provinces geojson - opendatasoft](https://data.opendatasoft.com/explore/dataset/georef-canada-province%40public/export/?disjunctive.prov_name_en)
+
+##### [Canadian Provinces gejson Data Source - Statistics Canada](https://www.statcan.gc.ca/en/reference/licence) - Source: Statistics Canada, referenced 2023-04-12. Reproduced and distributed on an "as is" basis with the permission of Statistics Canada.
+
+##### [Webpage with US States geojson - rstudio.github.io](https://rstudio.github.io/leaflet/choropleths.html)
+
+##### [US States geojson](https://rstudio.github.io/leaflet/json/us-states.geojson)
+
+## Links to Data Dictionaries
+
+##### [Data Dictionary 1](https://github.com/rfordatascience/tidytuesday/blob/master/data/2023/2023-01-10/readme.md#pfw_2021_publiccsv)
+
+##### [Data Dictionary 2](https://github.com/rfordatascience/tidytuesday/blob/master/data/2023/2023-01-10/readme.md#pfw_count_site_data_public_2021csv)
+
+```{r Libraries, echo=FALSE}
+library(tidyverse)
+library(here)
+library(leaflet)
+library(lubridate)
+library(devtools)
+library(kableExtra)
+library(geojson) #for loading in geojson files; allows us to view states and province names & borders
+library(maps)
+library(mapproj)
+library(mapdata)
+library(sp)
+library(rgeos)
+library(readr)
+```
+
+## Reading in Our Data
+
+```{r Reading in Our Data}
+ca_provinces <- geojsonio::geojson_read(here("Jesse", "Data", "ca_provinces.geojson"), what="sp")
+
+us_states <- geojsonio::geojson_read("https://rstudio.github.io/leaflet/json/us-states.geojson", what = "sp")
+
+feederwatch <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-01-10/PFW_2021_public.csv')
+site_data <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-01-10/PFW_count_site_data_public_2021.csv')
+SpeciesCode <- read_csv(here("fajardo","data","SpeciesCode.csv"))
+```
+
+## Data Wrangling :)
+
+```{r Data Wrangling, echo=TRUE, warning=FLASE, error=FALSE}
+
+feed_site <- full_join(feederwatch, site_data)
+birds_joined <- full_join(feed_site, SpeciesCode) %>% 
+  select(loc_id, latitude, longitude, subnational1_code, Month, Day, Year, species_code, how_many, sci_name, order, family)
+birds_joined$date <- paste(birds_joined$Month, birds_joined$Day, birds_joined$Year, sep = "/")
+
+state_labels <- us_states$name
+
+province_labels <- ca_provinces$name
+```
+
+## Leaflet Map Visualization
+
+```{r Leaflet Map}
+
+leaflet(birds_joined) %>% addTiles() %>% addMarkers(
+  clusterOptions = markerClusterOptions(),
+  clusterId = "birdsCluster",
+  label = ~sci_name) %>%
+  addEasyButton(easyButton(
+    states = list(
+      easyButtonState(
+        stateName="unfrozen-markers",
+        icon="ion-toggle",
+        title="Freeze Clusters",
+        onClick = JS("
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster', 'birdsCluster');
+            clusterManager.freezeAtZoom();
+            btn.state('frozen-markers');
+          }")
+      ),
+      easyButtonState(
+        stateName="frozen-markers",
+        icon="ion-toggle-filled",
+        title="UnFreeze Clusters",
+        onClick = JS("
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster', 'birdsCluster');
+            clusterManager.unfreeze();
+            btn.state('unfrozen-markers');
+          }")
+      )
+    )
+  )) %>% 
+  addPolygons(data=us_states,
+              color="lavenderblush",
+              weight=2,
+              opacity=1,
+              dashArray = 2.5,
+              smoothFactor = 1,
+              fillColor = "mediumslateblue",
+              fillOpacity = 0.6,
+              highlightOptions = highlightOptions(
+                weight=3.5,
+                color="lavender",
+                fillOpacity = .5,
+                dashArray = 0,
+                bringToFront = TRUE),
+              label=state_labels) %>% 
+  addPolygons(data=ca_provinces,
+              color="lavenderblush",
+              weight=2,
+              opacity=1,
+              dashArray = 2.5,
+              smoothFactor = 1,
+              fillColor = "coral",
+              fillOpacity = 0.6,
+              highlightOptions = highlightOptions(
+                weight=3.5,
+                color="salmon",
+                fillOpacity = .5,
+                dashArray = 0,
+                bringToFront = TRUE),
+              label=province_labels)
+
+```
