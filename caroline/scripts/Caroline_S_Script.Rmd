@@ -6,7 +6,6 @@ output:
   html_document:
     toc: TRUE
     toc_float: TRUE
-    self_contained: false
 ---
 # Introduction
 
@@ -38,6 +37,7 @@ library(purrr)
 library(tidyverse)
 library(sf)
 library(leaflet.extras)
+library(shiny)
 ```
 
 # Data
@@ -181,137 +181,100 @@ feederwatch_state <- feederwatch_sub %>%
 
 
 
-```{r}
-#make a dropdown menu to filter by season,month,time,and species_code
-#this works but not for rmarkdown knitting so I'm trying to fix this
-
-ui <- fluidPage(
-  selectInput("filter_by", "Filter by:", choices = c("season", "month", "time", "species_code")),
-  conditionalPanel(
-    condition = "input.filter_by == 'season'",
-    selectInput("season", "Select Season:", choices = unique(feederwatch_state$season))
-  ),
-  conditionalPanel(
-    condition = "input.filter_by == 'month'",
-    selectInput("month", "Select Month:", choices = unique(feederwatch_state$month))
-  ),
-  conditionalPanel(
-    condition = "input.filter_by == 'time'",
-    radioButtons("time", "Select Time of Day:", choices = c("am", "pm"))
-  ),
-  conditionalPanel(
-    condition = "input.filter_by == 'species_code'",
-    selectInput("species_code", "Select Species:", choices = unique(feederwatch_state$species_code))
-  ),
-  tableOutput("data")
-)
-
-server <- function(input, output, session) {
-  output$data <- renderTable({
-    data <- feederwatch_state
-    if (!is.null(input$filter_by)) {
-      if (input$filter_by == "season") {
-        data <- filter(data, season == input$season)
-      } else if (input$filter_by == "month") {
-        data <- filter(data, month == input$month)
-      } else if (input$filter_by == "time") {
-        if (input$time == "am") {
-          data <- data %>% filter(total_am > 0)
-        } else if (input$time == "pm") {
-          data <- data %>% filter(total_pm > 0)
-        }
-      } else if (input$filter_by == "species_code") {
-        data <- filter(data, species_code == input$species_code)
-      }
-    }
-    data
-  })
-}
-
-  # Update the dropdown menus based on the filter type selected
-  observe({
-    if (input$filter_by == "season") {
-      updateSelectInput(session, "season", label = "Select Season:",
-                        choices = c("All Seasons", unique(feederwatch_state$season)))
-      updateSelectInput(session, "month", label = "Select Month:", choices = NULL)
-      updateRadioButtons(session, "time", label = "Select Time of Day:", choices = c("am", "pm"))
-      updateSelectInput(session, "species_code", label = "Select Species:", choices = NULL)
-    } else if (input$filter_by == "month") {
-      updateSelectInput(session, "month", label = "Select Month:",
-                        choices = c("All Months", unique(feederwatch_state$month)))
-      updateSelectInput(session, "season", label = "Select Season:", choices = NULL)
-      updateRadioButtons(session, "time", label = "Select Time of Day:", choices = c("am", "pm"))
-      updateSelectInput(session, "species_code", label = "Select Species:", choices = NULL)
-    } else if (input$filter_by == "time") {
-      updateRadioButtons(session, "time", label = "Select Time of Day")
-    }
-  })
-
-shinyApp(ui, server)
-
-```
-
 
 ```{r}
 
+# create a reactive data frame that filters the original data based on the user's input
+filtered_data <- reactive({
+  if (input$filter_type == "species") {
+    feederwatch_state %>% filter(species_code == input$filter_species)
+  } else if (input$filter_type == "season") {
+    feederwatch_state %>% filter(season == input$filter_season)
+  } else if (input$filter_type == "month") {
+    feederwatch_state %>% filter(month == input$filter_month)
+  } else {
+    feederwatch_state %>% filter(total_am > 0 & total_pm > 0)
+  }
+})
 
-ui <- fluidPage(
-  selectInput("filter_by", "Filter by:", choices = c("season", "month", "time", "species_code")),
-  selectInput("time", "Time of Day:", choices = c("am", "pm")),
-  leafletOutput("myMap")
+
+
+# create an interactive map
+my_map <- leaflet(feederwatch_state) %>%
+  addTiles() %>%
+  addProviderTiles("Esri.WorldImagery") %>%
+  setView(lng = -95.7129, lat = 37.0902, zoom = 4)
+
+
+# create input controls for filtering
+filter_controls <- list(
+  selectInput(inputId = "filter_type",
+              label = "Filter by:",
+              choices = c("species", "season", "month", "time"),
+              selected = "species"),
+  textInput(inputId = "filter_species",
+            label = "Enter a species name:"),
+  selectInput(inputId = "filter_season",
+              label = "Select a season:",
+              choices = c("All", unique(feederwatch_state$season)),
+              selected = "All"),
+  selectInput(inputId = "filter_month",
+              label = "Select a month:",
+              choices = c("All", unique(feederwatch_state$month)),
+              selected = "All"),
+  checkboxInput(inputId = "filter_am",
+                label = "Show AM data",
+                value = TRUE),
+  checkboxInput(inputId = "filter_pm",
+                label = "Show PM data",
+                value = TRUE)
 )
 
-# Define filter menu after time input
-filter_menu <- selectInput("species_code", "Species Code:", choices = unique(feederwatch_state$species_code))
+# create filter button
+filter_button <- actionButton(inputId = "filter_button",
+                              label = "Apply filters")
 
 
-# Define server logic
-server <- function(input, output, session) {
-  # Create reactive filter
-  filtered_data <- reactive({
-    data <- feederwatch_state
-    if (!is.null(input$filter_by)) {
-      if (input$filter_by == "season") {
-        data <- filter(data, season == input$season)
-      } else if (input$filter_by == "month") {
-        data <- filter(data, month == input$month)
-      } else if (input$filter_by == "time") {
-        if (input$time == "am") {
-          data <- data %>% filter(total_am > 0)
-        } else if (input$time == "pm") {
-          data <- data %>% filter(total_pm > 0)
-        }
-      } else if (input$filter_by == "species_code") {
-        data <- filter(data, species_code == input$species_code)
-      }
-    }
-    data
-  })
+# apply filters on button press
+observeEvent(input$filter_button, {
+  filtered_data <- filtered_data() %>%
+    filter(season == input$filter_season,
+           month == input$filter_month,
+           total_am > 0 | input$filter_am,
+           total_pm > 0 | input$filter_pm,
+           species_code == input$filter_species)
+  
+  # update the map with filtered data
+  my_map %>% 
+    clearMarkers() %>%
+    addCircleMarkers(data = filtered_data(), 
+                     lat = ~latitude, 
+                     lng = ~longitude, 
+                     radius = ~total_birds/10, 
+                     color = "blue", 
+                     stroke = FALSE, 
+                     fillOpacity = 0.8) %>%
+    addLegend(position = "bottomright",
+              pal = colorNumeric(palette = "Blues", domain = filtered_data()$total_birds),
+              values = filtered_data()$total_birds,
+              title = "Total Birds",
+              opacity = 1)
+})
 
-  output$myMap <- renderLeaflet({
-    leaflet(filtered_data()) %>%
-      addProviderTiles("CartoDB.Positron") %>%
-      setView(-95.7129, 37.0902, zoom = 4) %>%
-      addPolygons(data = filtered_data(),
-                  fillColor = ~colorQuantile("YlOrRd", total_checklists)(total_checklists),
-                  fillOpacity = 0.7,
-                  color = "#BDBDC3",
-                  weight = 1) %>%
-      addLegend(pal = colorQuantile("YlOrRd", total_checklists),
-                values = ~total_checklists,
-                opacity = 0.7,
-                title = "Total Checklists",
-                position = "bottomright") %>%
-                onRender("function(map, error, options) {
-                $('.selectize-control').removeClass('form-control');
-                }") %>%
-      addControl(filter_menu, position = "topright")
-  })
-}
-
-# Run the app
-shinyApp(ui, server)
-
+  
+# add search control and filter controls to map
+my_map %>% 
+  addSearchOSM() %>%
+  addLayersControl(overlayGroups = list("Filtered Data" = filtered_data),
+                   baseGroups = list("Original Data" = feederwatch_state),
+                   options = layersControlOptions( filter_controls,collapsed = TRUE),
+                   position = "topright") %>%
+  addControl(
+    filter_controls,
+    tags$br(),
+    filter_button,
+    position = "topleft"
+  )
 
 
 
