@@ -10,6 +10,6 @@ This is our repository for Avetis, Cindy, Jesse, Caroline, and Helia.
   
   - *Caroline*: Worked on filtering the data in order to create a separate map that shows the data filtered by season, months, species, and time. Merged to Cindy's data and was able to create a map with these same updates with a search bar using addSearchOSM() and added additional parameters using addMeasure()
   
-  - *Helia*: Created an independent chloropleth (not provided here). Giving the introduction for the presentation (libraries, leaflet, and data).
+  - *Helia*: Created an independent chloropleth (not provided here),Trying add titles and setview. Giving the introduction for the presentation (libraries, leaflet package , and data).
   
 # html is too *HUGE* - [here's the link to download](https://drive.google.com/file/d/14ss6zz2Qit6RG7hAvVqjEsWOZpee-n4m/view?usp=sharing)
