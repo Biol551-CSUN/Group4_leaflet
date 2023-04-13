@@ -1,33 +1,3 @@
----
-title: "Introduction"
-author: "Avetis Mishegyan"
-date: "`r Sys.Date()`"
-output:
-  html_document:
-    toc: TRUE
-    toc_float: TRUE
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,
-                      message = FALSE,
-                      warning = FALSE,
-                      fig.path = "../output/")
-```
-
-## Introduction
-
-Today we are going to use the Leaflet R package:
-
-* Created by Volodymyr Agafonkin
-* Package is useful for creating interactive maps
-* Used by websites like the The New York Times and The Washington Post just to name a few
-* More information can be found on GitHub Pages for [Leaflet](https://rstudio.github.io/leaflet/)
-
-### Avetis Functions (addProviderTiles, addaddLayersControl, and addControl)
-
-* More information on how to use the functions above can be found bellow:
-  * [addProviderTiles](https://rstudio.github.io/leaflet/basemaps.html)
-  * [addaddLayersControl](https://bookdown.org/nicohahn/making_maps_with_r5/docs/leaflet.html)
-  * [addControl](https://www.rdocumentation.org/packages/leaflet/versions/2.1.2/topics/addControl)
-* Other free third-party basemaps can be found [here](http://leaflet-extras.github.io/leaflet-providers/preview/index.html)
+version https://git-lfs.github.com/spec/v1
+oid sha256:75beb4c512755bf66caf3efc4beecac840206477aa8b51fed5d6bc12545fbfed
+size 1213
