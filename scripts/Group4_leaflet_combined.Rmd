@@ -1,14 +1,24 @@
 ---
-title: "Group4_leaflet_combined"
-author: "Caroline S."
-date: "`r Sys.Date()`"
-output: html_document
+title: "Group 4 Script"
+author: "Group 4 - Cindy Fajardo, Jesse G Jones, Avetis Mishegyan, Helia Manesh, Caroline Solis"
+date: "2023-04-12"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    theme: readthedown
 ---
 
-
 ```{r include=FALSE}
-knitr::read_chunk("Group_4_Leaflet_part1.Rmd")
-knitr::read_chunk("Group4_leaflet_part2.Rmd")
+# Render the two Rmd files
+rmarkdown::render("Group_4_Leaflet_part1.Rmd")
+rmarkdown::render("Group4_leaflet_part2.Rmd")
+
+```
+
+```{r}
+# Merge the resulting HTML files
+rmarkdown::merge("Group_4_Leaflet_part1.html", "Group4_leaflet_part2.html", output_file = "Group4_leaflet_combined.html")
 ```
 
 # Description
