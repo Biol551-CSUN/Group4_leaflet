@@ -12,18 +12,15 @@ knitr::opts_chunk$set(echo = FALSE,
                       fig.path = "../Output/")
 ```
 
+# Cites used
+[Leaflet Source](https://rstudio.github.io/leaflet/map_widget.html)
+This is a very good source to use to help you work your way through the leaflet package step by step. Each chapter will help you create layer by layer to make the map you are working with interactive with a variety of tools you can use.
+
 # Libraries
 ```{r, Libraries}
 library(tidyverse)
 library(here)
 library(leaflet)
-library(lubridate)
-library(devtools)
-library(kableExtra)
-library(memer)
-library(maps)
-library(mapproj)
-library(mapdata)
 library(sp)
 library(rgeos)
 library(readr)
@@ -36,47 +33,23 @@ feederwatch <- readr::read_csv('https://raw.githubusercontent.com/rfordatascienc
 
 site_data <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-01-10/PFW_count_site_data_public_2021.csv')
 
-SpeciesCode <- read_csv(here("fajardo","data","SpeciesCode.csv"))
+SpeciesCode <- read_csv(here("fajardo","data","SpeciesCode.csv")) # This CSV file was downloaded from Project FeederWatch Data Dictionary found here (https://drive.google.com/file/d/1kHmx2XhA2MJtEyTNMpwqTQEnoa9M7Il2/view)
 ```
 
 # Cites used
-https://rstudio.github.io/leaflet/map_widget.html
+[Leaflet Source](https://rstudio.github.io/leaflet/map_widget.html)
+This is a very good source to use to help you work your way through the leaflet package
 
 # Basic leaflet commands to learn
+In this section we will create a very simple map to help visualize what leaflet does. The functions that are used are leaflet(), addTiles(), and addMarkers().
 ```{r, Practice}
 m <- leaflet() %>% #step 1. Create a map widget by calling leaflet()
-  addTiles() %>%  # Add default OpenStreetMap map tiles, step 2. Add layers (i.e., features) to the map by using layer functions (e.g. addTiles, addMarkers, addPolygons) to modify the map widget
-  addMarkers(lng=174.768, lat=-36.852, popup="The birthplace of R") # Repeat step 2 as desired, mst use long and lat
+  addTiles() %>%  # Add default OpenStreetMap map tiles, Step 2. Add layers (i.e., features) to the map by using layer functions (e.g. addTiles, addMarkers, addPolygons) to modify the map widget
+  addMarkers(lng=174.768, lat=-36.852, popup="The birthplace of R") # Repeat step 2 as desired. When using markers you must must use longitude and latitude in order for the markers to be placed on the map.
 m  # Print the map
 
-# add some circles to a map
-df = data.frame(Lat = 1:10, Long = rnorm(10))
-leaflet(df) %>% addCircles() # this didn't make anything
-
-leaflet(df) %>% addCircles(lng = ~Long, lat = ~Lat) #This didn't make sense
 ```
 
-
-```{r, SP}
-Sr1 = Polygon(cbind(c(2, 4, 4, 1, 2), c(2, 3, 5, 4, 2)))
-Sr2 = Polygon(cbind(c(5, 4, 2, 5), c(2, 3, 2, 2)))
-Sr3 = Polygon(cbind(c(4, 4, 5, 10, 4), c(5, 3, 2, 5, 5)))
-Sr4 = Polygon(cbind(c(5, 6, 6, 5, 5), c(4, 4, 3, 3, 4)), hole = TRUE)
-Srs1 = Polygons(list(Sr1), "s1")
-Srs2 = Polygons(list(Sr2), "s2")
-Srs3 = Polygons(list(Sr4, Sr3), "s3/4")
-SpP = SpatialPolygons(list(Srs1, Srs2, Srs3), 1:3)
-leaflet(height = "300px") %>% addPolygons(data = SpP) # this made a cool polygon with not map but you can zzom in and out
-
-```
-
-
-# Practice with maps
-```{r}
-mapStates = map("state", fill = TRUE, plot = FALSE)
-leaflet(data = mapStates) %>% addTiles() %>% # uses data to map the US but used a map of North America
-  addPolygons(fillColor = topo.colors(10, alpha = NULL), stroke = FALSE) # makes shapes of states
-```
 
 # The Formula Interface
 The arguments of all layer functions can take normal R objects, such as a numeric vector for the lat argument, or a character vector of colors for the color argument. They can also take a one-sided formula, in which case the formula will be evaluated using the data argument as the environment. For example, ~ x means the variable x in the data object, and you can write arbitrary expressions on the right-hand side, e.g., ~ sqrt(x + 1)
@@ -93,54 +66,32 @@ m %>% addCircleMarkers(radius = ~size, color = ~color, fill = FALSE)
 m %>% addCircleMarkers(radius = runif(100, 4, 10), color = c('red'))
 ```
 
-# Using Basemaps
-Leaflet supports basemaps using map tiles, popularized by Google Maps and now used by nearly all interactive web maps.The easiest way to add tiles is by calling addTiles() with no arguments; by default, OpenStreetMap tiles are used.
-```{r, Base Maps}
-n <- leaflet() %>% setView(lng = -71.0589, lat = 42.3601, zoom = 12) #setView argument requires a long and lat with a zoom setting
-n %>% addTiles() # this ads OpenStreetMap tile from google
-```
-
-# Adding tiles 
-There are a ton of tiles you can use as your base maps. type in name(providers) to look all of the tiles up
-```{r}
-m %>% addProviderTiles(providers$OpenWeatherMap.Snow) # alot of them look the same though
-
-m %>% addProviderTiles(providers$Stamen.Toner)
-
-m %>% addProviderTiles(providers$Esri.NatGeoWorldMap)
-```
-
-# Markers
-## Icon Markers
-Icon markers are added using the addMarkers or the addAwesomeMarkers functions. Their default appearance is a dropped pin. As with most layer functions, the popup argument can be used to add a message to be displayed on click, and the label option can be used to display a text label either on hover or statically.
-```{r}
-data(quakes)
-# Show first 20 rows from the `quakes` dataset
-leaflet(data = quakes[1:20,]) %>% addTiles() %>%
-  addMarkers(~long, ~lat, popup = ~as.character(mag), label = ~as.character(mag))
-```
 
 # Data Wrangling
+In order to create our final map, we first needed to wrangle our data. We did a full join of feeder watch data and site data. We then did a full join of the new fully joined data named **birds_joined** with the species code data and selected columns loc_id, latitude, longtitude, subnational1_code, Month, Day, Year, species_cide, how_many, sci_name, order, family.
 ```{r}
 feed_site <- full_join(feederwatch, site_data)
 birds_joined <- full_join(feed_site, SpeciesCode) %>% 
   select(loc_id, latitude, longitude, subnational1_code, Month, Day, Year, species_code, how_many, sci_name, order, family)
-birds_joined$date <- paste(birds_joined$Month, birds_joined$Day, birds_joined$Year, sep = "/")
+birds_joined$date <- paste(birds_joined$Month, birds_joined$Day, birds_joined$Year, sep = "/") # the paste function is an R based command that will merge columns together and you can separate the values with a character, like "\", sourced from (https://datasharkie.com/how-to-merge-two-columns-in-r/) 
 ```
 
-# Working with data and leaflet
+# Working with Cluster Markers and adding buttons.
+When adding a large amounts of markers on your map, you can cluster them together using Leaflet.markercluster plug-in. To eneable the plug-in, you can use options like **clusterOptions**. The map becomes interactive, zooming in as you select a cluster, creating smaller clusters until you reach the individual markers.
+
+When working with clusters, you can also add buttons to your map to freeze and unfreeze your clusters. 
 ```{r}
 leaflet(birds_joined) %>% addTiles() %>% addMarkers(
-  clusterOptions = markerClusterOptions(),
+  clusterOptions = markerClusterOptions(), #here you being to use the cluster option plug in
     clusterId = "birdsCluster",
-  label = ~sci_name) %>%
-  addEasyButton(easyButton(
+  label = ~sci_name) %>% # here you use  formula interface by making the label the scientific name of the bird that was seen.
+  addEasyButton(easyButton(  
     states = list(
-      easyButtonState(
+      easyButtonState( 
         stateName="unfrozen-markers",
-        icon="ion-toggle",
+        icon="ion-toggle", 
         title="Freeze Clusters",
-        onClick = JS("
+        onClick = JS(" 
           function(btn, map) {
             var clusterManager =
               map.layerManager.getLayer('cluster', 'birdsCluster');
@@ -148,11 +99,11 @@ leaflet(birds_joined) %>% addTiles() %>% addMarkers(
             btn.state('frozen-markers');
           }")
       ),
-      easyButtonState(
+      easyButtonState( 
         stateName="frozen-markers",
-        icon="ion-toggle-filled",
+        icon="ion-toggle-filled", 
         title="UnFreeze Clusters",
-        onClick = JS("
+        onClick = JS(" 
           function(btn, map) {
             var clusterManager =
               map.layerManager.getLayer('cluster', 'birdsCluster');
