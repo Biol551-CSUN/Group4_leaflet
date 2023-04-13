@@ -1,0 +1,661 @@
+---
+title: "Group 4 Script"
+author: "Group 4 - Cindy Fajardo, Jesse G Jones, Avetis Mishegyan, Helia Manesh, Caroline Solis"
+date: "2023-04-12"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    theme: readthedown
+---
+
+# Introduction
+
+## Leaflet package
+
+Allows you to create interactive maps using geographical data. You can add markers, lines, and polygons to your map, and customize them with various colors, sizes, and labels. You can also add various types of basemaps, such as satellite imagery or street maps, and control the zoom level and center of your map. Leaflet supports a variety of coordinate systems and projection formats, so you can easily work with data from different sources. Overall, it's a great tool for visualizing geographical data and exploring patterns and trends in your data.
+
+[Click here](https://rstudio.github.io/leaflet/) to learn more about this package.
+
+## Sources & Credits! - Click the Links Below
+
+##### [Tidy Tuesday Bird FeederWatch - 2023-01-10](https://github.com/rfordatascience/tidytuesday/blob/master/data/2023/2023-01-10/readme.md)
+
+##### [Data Source - FeederWatch](https://feederwatch.org/explore/raw-dataset-requests/)
+
+##### [Article - Over 30 Years of Standardized Bird Counts at Supplementary Feeding Stations in North America: A Citizen Science Data Report for Project FeederWatch](https://www.frontiersin.org/articles/10.3389/fevo.2021.619682/full)
+
+##### [TidyTuesday Repository](https://github.com/rfordatascience/tidytuesday)
+
+##### [Webpage with Canadian Provinces geojson - opendatasoft](https://data.opendatasoft.com/explore/dataset/georef-canada-province%40public/export/?disjunctive.prov_name_en)
+
+##### [Canadian Provinces gejson Data Source - Statistics Canada](https://www.statcan.gc.ca/en/reference/licence) - Source: Statistics Canada, referenced 2023-04-12. Reproduced and distributed on an "as is" basis with the permission of Statistics Canada.
+
+##### [Webpage with US States geojson - rstudio.github.io](https://rstudio.github.io/leaflet/choropleths.html)
+
+##### [US States geojson](https://rstudio.github.io/leaflet/json/us-states.geojson)
+
+## Links to Data Dictionaries
+
+##### [Data Dictionary 1](https://github.com/rfordatascience/tidytuesday/blob/master/data/2023/2023-01-10/readme.md#pfw_2021_publiccsv)
+
+##### [Data Dictionary 2](https://github.com/rfordatascience/tidytuesday/blob/master/data/2023/2023-01-10/readme.md#pfw_count_site_data_public_2021csv)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      fig.path = "../output/")
+```
+
+### Loading Libraries
+
+```{r Libraries, echo=FALSE}
+#install.packages("rmdformats") for rmarkdown theme
+library(tidyverse)
+library(here)
+library(leaflet)
+library(geojson) #for loading in geojson files; allows us to view states and province names & borders
+library(rgeos)
+library(readr)
+library(dplyr)
+library(purrr) 
+library(tidyverse)
+library(sf)
+library(leaflet.extras)
+```
+
+## Reading in Our Data
+
+```{r Reading in Our Data}
+ca_provinces <- geojsonio::geojson_read(here("data", "provinces.geojson"), what="sp") #read in the geographical and spatial data for Canadian Provinces 
+
+us_states <- geojsonio::geojson_read("https://rstudio.github.io/leaflet/json/us-states.geojson", what = "sp") #read in the geographical and spatial data for U.S. states 
+
+feederwatch <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-01-10/PFW_2021_public.csv') #read in the feederwatch data from the TidyTuesday Github repository
+site_data <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-01-10/PFW_count_site_data_public_2021.csv') #read in the site data from the TidyTuesday Github repository
+SpeciesCode <- read_csv(here("data","SpeciesCode.csv")) #read in Cindy's SpeciesCode csv file
+```
+
+##Group Sections
+
+### Avetis' Section
+
+In my section, I demonstrate how to incorporate various third-party basemaps using the addProviderTiles function. Additionally, I use the addLayersControl function to add layer controls, which allows users to toggle between different map layers.
+
+To provide context for the map, I also include a text box using the addControl function.
+
+#### Functions used: (addProviderTiles, addaddLayersControl, and addControl)
+
+-   More information on how to use the functions above can be found bellow:
+    -   [addProviderTiles](https://rstudio.github.io/leaflet/basemaps.html)
+    -   [addaddLayersControl](https://bookdown.org/nicohahn/making_maps_with_r5/docs/leaflet.html)
+    -   [addControl](https://www.rdocumentation.org/packages/leaflet/versions/2.1.2/topics/addControl)
+-   Other free third-party basemaps can be found [here](http://leaflet-extras.github.io/leaflet-providers/preview/index.html)
+
+```{r}
+### Data Analysis ######
+map <- leaflet() %>%
+  addTiles() %>% # function adds default OpenStreetMap tile layer (ie. basemap)
+  addProviderTiles(providers$OpenStreetMap, group = "OpenStreetMap") %>% # function adds third-party tiles (ie. basemaps)
+  addProviderTiles(providers$CartoDB.DarkMatter, group = "CartoDB.DarkMatter") %>% # providers$ argument names third-party basemap
+  addProviderTiles(providers$NASAGIBS.ViirsEarthAtNight2012, group = "NASAGIBS.ViirsEarthAtNight2012") %>% # group argument is the name of the group the newly created layers belong to
+  addProviderTiles(providers$Esri.WorldImagery, group = "Esri.WorldImagery") %>% 
+  addLayersControl(baseGroups = c("OpenStreetMap", # function adds layer controls to hide/show map layers,
+                                  # and baseGroups argument creates character vector where each element is the name of a group
+                                  "CartoDB.DarkMatter",
+                                  "NASAGIBS.ViirsEarthAtNight2012",
+                                  "Esri.WorldImagery"),
+                   position = "topleft") %>%
+  addControl(html = "#TidyTuesday(2023-01-10) - Bird FeederWatch Data", # function adds text box, and html argument displays text
+             position = "bottomright") # position argument moves text box to any corner
+map # prints map
+```
+
+### Cindy's Section
+
+#### Functions used: (addProviderTiles, addaddLayersControl, and addControl)
+
+-   More information on how to use the functions above can be found bellow:
+    -   [addProviderTiles](https://rstudio.github.io/leaflet/basemaps.html)
+    -   [addaddLayersControl](https://bookdown.org/nicohahn/making_maps_with_r5/docs/leaflet.html)
+    -   [addControl](https://www.rdocumentation.org/packages/leaflet/versions/2.1.2/topics/addControl)
+
+#### Basic leaflet commands to learn
+
+In this section we will create a very simple map to help visualize what leaflet does. The functions that are used are leaflet(), addTiles(), and addMarkers().
+
+```{r, Practice}
+m <- leaflet() %>% #step 1. Create a map widget by calling leaflet()
+  addTiles() %>%  # Add default OpenStreetMap map tiles, Step 2. Add layers (i.e., features) to the map by using layer functions (e.g. addTiles, addMarkers, addPolygons) to modify the map widget
+  addMarkers(lng=174.768, lat=-36.852, popup="The birthplace of R") # Repeat step 2 as desired. When using markers you must must use longitude and latitude in order for the markers to be placed on the map.
+m  # Print the map
+```
+
+#### The Formula Interface
+
+The arguments of all layer functions can take normal R objects, such as a numeric vector for the lat argument, or a character vector of colors for the color argument. They can also take a one-sided formula, in which case the formula will be evaluated using the data argument as the environment. For example, \~ x means the variable x in the data object, and you can write arbitrary expressions on the right-hand side, e.g., \~ sqrt(x + 1)
+
+```{r}
+m = leaflet(map) %>% addTiles()
+df = data.frame(
+  lat = rnorm(100),
+  lng = rnorm(100),
+  size = runif(100, 5, 20),
+  color = sample(colors(), 100)
+)
+m = leaflet(df) %>% addTiles()
+m %>% addCircleMarkers(radius = ~size, color = ~color, fill = FALSE)
+m %>% addCircleMarkers(radius = runif(100, 4, 10), color = c('red'))
+```
+
+#### Data Wrangling
+
+In order to create our final map, we first needed to wrangle our data. We did a full join of feeder watch data and site data. We then did a full join of the new fully joined data named **birds_joined** with the species code data and selected columns loc_id, latitude, longtitude, subnational1_code, Month, Day, Year, species_cide, how_many, sci_name, order, family.
+
+```{r}
+feed_site <- full_join(feederwatch, site_data)
+birds_joined <- full_join(feed_site, SpeciesCode) %>% 
+  select(loc_id, latitude, longitude, subnational1_code, Month, Day, Year, species_code, how_many, sci_name, order, family)
+birds_joined$date <- paste(birds_joined$Month, birds_joined$Day, birds_joined$Year, sep = "/") # the paste function is an R based command that will merge columns together and you can separate the values with a character, like "\", sourced from (https://datasharkie.com/how-to-merge-two-columns-in-r/) 
+```
+
+#### Working with Cluster Markers and adding buttons.
+
+When adding a large amounts of markers on your map, you can cluster them together using Leaflet.markercluster plug-in. To eneable the plug-in, you can use options like **clusterOptions**. The map becomes interactive, zooming in as you select a cluster, creating smaller clusters until you reach the individual markers.
+
+When working with clusters, you can also add buttons to your map to freeze and unfreeze your clusters.
+
+```{r}
+leaflet(birds_joined) %>% addTiles() %>% addMarkers(
+  clusterOptions = markerClusterOptions(), #here you being to use the cluster option plug in
+    clusterId = "birdsCluster",
+  label = ~sci_name) %>% # here you use  formula interface by making the label the scientific name of the bird that was seen.
+  addEasyButton(easyButton(  
+    states = list(
+      easyButtonState( 
+        stateName="unfrozen-markers",
+        icon="ion-toggle", 
+        title="Freeze Clusters",
+        onClick = JS(" 
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster', 'birdsCluster');
+            clusterManager.freezeAtZoom();
+            btn.state('frozen-markers');
+          }")
+      ),
+      easyButtonState( 
+        stateName="frozen-markers",
+        icon="ion-toggle-filled", 
+        title="UnFreeze Clusters",
+        onClick = JS(" 
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster', 'birdsCluster');
+            clusterManager.unfreeze();
+            btn.state('unfrozen-markers');
+          }")
+      )
+    )
+  ))
+```
+
+### Jesse's Section
+
+#### Functions used: (addProviderTiles, addaddLayersControl, and addControl)
+
+-   More information on how to use the functions above can be found bellow:
+    -   [addProviderTiles](https://rstudio.github.io/leaflet/basemaps.html)
+    -   [addaddLayersControl](https://bookdown.org/nicohahn/making_maps_with_r5/docs/leaflet.html)
+    -   [addControl](https://www.rdocumentation.org/packages/leaflet/versions/2.1.2/topics/addControl)
+
+
+#### Basic leaflet commands to learn
+
+In this section we will create a very simple map to help visualize what leaflet does. The functions that are used are leaflet(), addTiles(), and addMarkers().
+
+#### Assigning objects for use of .geojson spatial data
+
+Before we start creating maps with Leaflet, we need to prepare some data. In this section, we assign two objects, state_labels and province_labels, that will be used as labels on our map.
+
+The state_labels object is created by extracting the name column from the us_states .geojson file. Similarly, the province_labels object is created by extracting the prov_name_en column from the ca_provinces .geojson file. These objects will be used later on when we add markers to our maps.
+
+```{r Data Wrangling, echo=TRUE, warning=FALSE, error=FALSE}
+
+
+state_labels <- us_states$name #create an object that has uses the name column from your us_states geojson file; this will be used for our labels
+
+province_labels <- ca_provinces$prov_name_en #this object is for our Canadian provinces labels; uses the "prov_name_en" column from the ca_provinces label
+```
+
+#### Use addPolygon to outline geographical areas
+
+In this section, we use the addPolygons() function to outline geographical areas on the map. We first assign the state_labels object using the "name" column from the us_states geojson file, and then use it to label each state. We create a leaflet map using the leaflet() function and add tiles using addTiles(). We then add markers with cluster options and an easy button. Finally, we use addPolygons() to add the state borders to the map with customizable features such as color, weight, opacity, dashArray, smoothFactor, fillColor and fillOpacity.
+
+```{r}
+
+state_labels <- us_states$name
+
+leaflet(birds_joined) %>% addTiles() %>% addMarkers(
+  clusterOptions = markerClusterOptions(),
+  clusterId = "birdsCluster",
+  label = ~sci_name) %>%
+  addEasyButton(easyButton(
+    states = list(
+      easyButtonState(
+        stateName="unfrozen-markers",
+        icon="ion-toggle",
+        title="Freeze Clusters",
+        onClick = JS("
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster', 'birdsCluster');
+            clusterManager.freezeAtZoom();
+            btn.state('frozen-markers');
+          }")
+      ),
+      easyButtonState(
+        stateName="frozen-markers",
+        icon="ion-toggle-filled",
+        title="UnFreeze Clusters",
+        onClick = JS("
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster', 'birdsCluster');
+            clusterManager.unfreeze();
+            btn.state('unfrozen-markers');
+          }")
+      )
+    )
+  )) %>% addPolygons(data=us_states, #use data from the us_states object (geojson)
+              color="lavenderblush", #add an outline color for each state border
+              weight=2, #set border weight to 2
+              opacity=1, #set opacity to 1 (full visibility)
+              dashArray = 2.5, #give your state borders dashes
+              smoothFactor = 1, #smooth out the edges!
+              fillColor = "mediumslateblue", #add a fill colr to the states
+              fillOpacity = 0.6) #make the fill opacity .60 (visibility is 60%)
+```
+
+#### Let's add highlights & labels!
+
+In this section, we are adding highlights and labels to the map. We are using the highlightOptions function to add highlights while hovering over each state. We set the weight, color, fillOpacity, dashArray, and bringToFront options of the highlight using this function.
+
+To label the states, we use the label argument and pass it the state_labels object that we created earlier in the script. This adds the name of each state to the map as a label.
+
+```{r}
+leaflet(birds_joined) %>% addTiles() %>% addMarkers( 
+  clusterOptions = markerClusterOptions(),
+  clusterId = "birdsCluster",
+  label = ~sci_name) %>%
+  addEasyButton(easyButton(
+    states = list(
+      easyButtonState(
+        stateName="unfrozen-markers",
+        icon="ion-toggle",
+        title="Freeze Clusters",
+        onClick = JS("
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster', 'birdsCluster');
+            clusterManager.freezeAtZoom();
+            btn.state('frozen-markers');
+          }")
+      ),
+      easyButtonState(
+        stateName="frozen-markers",
+        icon="ion-toggle-filled",
+        title="UnFreeze Clusters",
+        onClick = JS("
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster', 'birdsCluster');
+            clusterManager.unfreeze();
+            btn.state('unfrozen-markers');
+          }")
+      )
+    )
+  )) %>% 
+  addPolygons(data=us_states, #use data from the us_states object (geojson)
+              color="lavenderblush", #add an outline color for each state border
+              weight=2, #set border weight to 2
+              opacity=1, #set opacity to 1 (full visibility)
+              dashArray = 2.5, #give your state borders dashes
+              smoothFactor = 1, #smooth out the edges!
+              fillColor = "mediumslateblue", #add a fill colr to the states
+              fillOpacity = 0.6, #make the fill opacity .60 (visibility is 60%)
+              highlightOptions = highlightOptions( #add highlights while hovering over each state
+                weight=3.5, #set the highlight border weight to 3.5
+                color="lavender", #set the highlight border color to lavender
+                fillOpacity = .5, #make the fill opacity 0.5 when hovering
+                dashArray = 0, #have no highlight dashes when hovering
+                bringToFront = TRUE), #bring your highlights to the front layer
+              label=state_labels) #label your states the name of the state
+```
+
+#### Adding Canadian Provinces & ProviderTiles...
+
+This section of the code adds a layer of polygons to the leaflet map, which represent the Canadian provinces. It uses the Canadian provinces' geojson spatial data stored in the "ca_provinces" object to create the polygons. The "addPolygons()" function is used again to add the polygons to the map, with various options for the appearance of the borders and fill color. The "label" argument is used to add province names as labels to the polygons. Additionally, the code adds various basemaps from third-party providers, such as OpenStreetMap and CartoDB, and creates a layer control to allow the user to switch between different basemaps.
+
+```{r Leaflet Map}
+
+province_labels <- ca_provinces$prov_name_en
+
+leaflet(birds_joined) %>% # function adds default OpenStreetMap tile layer (ie. basemap)
+  addProviderTiles(providers$OpenStreetMap, group = "OpenStreetMap") %>% # function adds third-party tiles (ie. basemaps)
+  addProviderTiles(providers$CartoDB.DarkMatter, group = "CartoDB.DarkMatter") %>% # providers$ argument names third-party basemap
+  addProviderTiles(providers$NASAGIBS.ViirsEarthAtNight2012, group = "NASAGIBS.ViirsEarthAtNight2012") %>% # group argument is the name of the group the newly created layers belong to
+  addProviderTiles(providers$Esri.WorldImagery, group = "Esri.WorldImagery") %>% 
+  addLayersControl(baseGroups = c("OpenStreetMap", # function adds layer controls to hide/show map layers,
+                                  # and baseGroups argument creates character vector where each element is the name of a group
+                                  "CartoDB.DarkMatter",
+                                  "NASAGIBS.ViirsEarthAtNight2012",
+                                  "Esri.WorldImagery"),
+                   position = "topleft") %>%
+  addControl(html = "#TidyTuesday(2023-01-10) - Bird FeederWatch Data", # function adds text box, and html argument displays text
+             position = "bottomright")%>%  # position argument moves text box to any corner 
+  addMarkers(
+  clusterOptions = markerClusterOptions(),
+  clusterId = "birdsCluster",
+  label = ~sci_name) %>%
+  addEasyButton(easyButton(
+    states = list(
+      easyButtonState(
+        stateName="unfrozen-markers",
+        icon="ion-toggle",
+        title="Freeze Clusters",
+        onClick = JS("
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster', 'birdsCluster');
+            clusterManager.freezeAtZoom();
+            btn.state('frozen-markers');
+          }")
+      ),
+      easyButtonState(
+        stateName="frozen-markers",
+        icon="ion-toggle-filled",
+        title="UnFreeze Clusters",
+        onClick = JS("
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster', 'birdsCluster');
+            clusterManager.unfreeze();
+            btn.state('unfrozen-markers');
+          }")
+      )
+    )
+  )) %>% 
+  addPolygons(data=us_states,
+              color="lavenderblush",
+              weight=2,
+              opacity=1,
+              dashArray = 2.5,
+              smoothFactor = 1,
+              fillColor = "mediumslateblue",
+              fillOpacity = 0.6,
+              highlightOptions = highlightOptions(
+                weight=3.5,
+                color="lavender",
+                fillOpacity = .5,
+                dashArray = 0,
+                bringToFront = TRUE),
+              label=state_labels) %>% 
+  addPolygons(data=ca_provinces, #use the data from Canadian provinces geojson spatial data
+              color="lavenderblush",
+              weight=2,
+              opacity=1,
+              dashArray = 2.5,
+              smoothFactor = 1,
+              fillColor = "coral", #let's use a different color for Canada...
+              fillOpacity = 0.6,
+              highlightOptions = highlightOptions(
+                weight=3.5,
+                color="salmon", #and have a different highlight border color
+                fillOpacity = .5,
+                dashArray = 0,
+                bringToFront = TRUE),
+              label=province_labels) #use the Canadian province labels
+
+```
+
+### Caroline's Section
+
+In this section, I've added two more functions to our Leaflet map: addSearchOSM() and addMeasure(). These functions allow users to search for locations on the map and measure distances between points, respectively. The addSearchOSM() function uses the OpenStreetMap Nominatim service to perform a search for a specific location, and addMeasure() creates a tool that allows users to measure distances on the map by clicking on different points.
+
+To add these functions to our map, I simply called them after the previous code, using the pipe operator to continue building on the existing map. Now, users can search for locations and measure distances directly on the map without having to rely on external tools.
+
+
+#### Functions used: (addProviderTiles, addaddLayersControl, and addControl)
+
+-   More information on how to use the functions above can be found bellow:
+    -   [addProviderTiles](https://rstudio.github.io/leaflet/basemaps.html)
+    -   [addaddLayersControl](https://bookdown.org/nicohahn/making_maps_with_r5/docs/leaflet.html)
+    -   [addControl](https://www.rdocumentation.org/packages/leaflet/versions/2.1.2/topics/addControl)
+
+
+#### Function descriptions
+
+The addSearchOSM() function allows users to search for specific locations on the map by typing in an address or place name. This function uses the OpenStreetMap Nominatim service to search for the location and then zooms in on the result.
+
+The addMeasure() function adds a measurement tool to the map, which allows users to measure distances and areas on the map. This function adds a control to the map, which can be activated by clicking on the "Measure" button. Once activated, users can click on the map to create points that define the distance or area they want to measure. The measurement is then displayed on the control, and users can either clear the measurement or deactivate the tool by clicking on the "Clear" or "Close" button.
+
+```{r}
+# Functions ---------------------------------
+#Notes:
+        # "how_many" column:	Maximum number of individuals seen at one time during observation period
+        # I created a new column named "total_birds" = sum(how_many) aka what is the sum of max number. We might not need this.
+
+
+
+# Subset the data to only include relevant columns
+feederwatch_sub <- feederwatch %>% select(subnational1_code, species_code, Month, day1_am, day1_pm, day2_am, day2_pm, latitude, longitude)
+
+# rename the Month column numbers to actual month names
+rename_months <- function(month_number) {
+  months <- c("January", "February", "March", "April", "May", "June", "July",
+              "August", "September", "October", "November", "December")
+  return(months[month_number])
+}
+
+Month <- rename_months(feederwatch$Month)
+
+# Apply month name change to dataset
+feederwatch_sub <- feederwatch_sub %>%
+  mutate(month = rename_months(Month))
+
+
+# Create a function to categorize the birds based on season
+categorize_season <- function(month) {
+  if (month %in% c("March", "April", "May")) {
+    "Spring"
+  } else if (month %in% c("June", "July", "August")) {
+    "Summer"
+  } else if (month %in% c("September", "October", "November")) {
+    "Fall"
+  } else if (month %in% c("December", "January", "February")) {
+    "Winter"
+  } else {
+    "Year-round"
+  }
+}
+
+
+# Categorize the birds based on season
+feederwatch_sub <- feederwatch_sub %>%
+  mutate(season = map_chr(month, categorize_season))
+
+
+
+# Calculate the total of individuals seen during am or pm time
+feederwatch_sub <- feederwatch_sub %>%
+  mutate(total_am = (day1_am + day2_am),
+         total_pm = (day1_pm + day2_pm))
+
+
+# Group and summarize the data by state, species, and season/month
+feederwatch_state <- feederwatch_sub %>%
+  group_by(subnational1_code, species_code, season, month) %>%
+  reframe(total_am = sum(total_am),
+            total_pm = sum(total_pm),
+            lat = mean(latitude),
+            long = mean(longitude)) 
+
+
+```
+
+#### Using Cindy's code for my subset:
+
+```{r}
+Joined_Caroline <- full_join(birds_joined,feederwatch_state) %>% 
+  select(loc_id, 
+         latitude, 
+         longitude, 
+         subnational1_code, 
+         month, 
+         Month, 
+         Day, 
+         Year, 
+         species_code, 
+         how_many, 
+         sci_name, 
+         order, 
+         family)
+
+Joined_Caroline$date <- paste(Joined_Caroline$Month, 
+                              Joined_Caroline$Day, 
+                              Joined_Caroline$Year, 
+                              sep = "/")   # the paste function is an R based command that will merge columns together and you can separate the values with a character, like "\"
+
+Joined_filtered <- full_join(Joined_Caroline,feederwatch_state) %>%
+  select(loc_id,
+         latitude, 
+          longitude, 
+          subnational1_code, 
+          species_code, 
+          how_many, 
+          sci_name, 
+          order, 
+          family,
+          month,
+          date)
+
+print(Joined_filtered)
+
+```
+
+#### Using Jesse's code for final map
+
+```{r}
+province_labels <- ca_provinces$prov_name_en
+
+leaflet(Joined_filtered) %>% # function adds default OpenStreetMap tile layer (ie. basemap)
+  addProviderTiles(providers$OpenStreetMap, group = "OpenStreetMap") %>% # function adds third-party tiles (ie. basemaps)
+  addProviderTiles(providers$CartoDB.DarkMatter, group = "CartoDB.DarkMatter") %>% # providers$ argument names third-party basemap
+  addProviderTiles(providers$NASAGIBS.ViirsEarthAtNight2012, group = "NASAGIBS.ViirsEarthAtNight2012") %>% # group argument is the name of the group the newly created layers belong to
+  addProviderTiles(providers$Esri.WorldImagery, group = "Esri.WorldImagery") %>% 
+  addLayersControl(baseGroups = c("OpenStreetMap", # function adds layer controls to hide/show map layers,
+                                  # and baseGroups argument creates character vector where each element is the name of a group
+                                  "CartoDB.DarkMatter",
+                                  "NASAGIBS.ViirsEarthAtNight2012",
+                                  "Esri.WorldImagery"),
+                   position = "topleft") %>%
+  addControl(html = "#TidyTuesday(2023-01-10) - Bird FeederWatch Data", # function adds text box, and html argument displays text
+             position = "bottomright")%>%  # position argument moves text box to any corner 
+  addMarkers(
+  clusterOptions = markerClusterOptions(),
+  clusterId = "birdsCluster",
+  label = ~sci_name) %>%
+  addEasyButton(easyButton(
+    states = list(
+      easyButtonState(
+        stateName="unfrozen-markers",
+        icon="ion-toggle",
+        title="Freeze Clusters",
+        onClick = JS("
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster', 'birdsCluster');
+            clusterManager.freezeAtZoom();
+            btn.state('frozen-markers');
+          }")
+      ),
+      easyButtonState(
+        stateName="frozen-markers",
+        icon="ion-toggle-filled",
+        title="UnFreeze Clusters",
+        onClick = JS("
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster', 'birdsCluster');
+            clusterManager.unfreeze();
+            btn.state('unfrozen-markers');
+          }")
+      )
+    )
+  )) %>% 
+  addPolygons(data=us_states,
+              color="lavenderblush",
+              weight=2,
+              opacity=1,
+              dashArray = 2.5,
+              smoothFactor = 1,
+              fillColor = "mediumslateblue",
+              fillOpacity = 0.6,
+              highlightOptions = highlightOptions(
+                weight=3.5,
+                color="lavender",
+                fillOpacity = .5,
+                dashArray = 0,
+                bringToFront = TRUE),
+              label=state_labels) %>% 
+  addPolygons(data=ca_provinces, #use the data from Canadian provinces geojson spatial data
+              color="lavenderblush",
+              weight=2,
+              opacity=1,
+              dashArray = 2.5,
+              smoothFactor = 1,
+              fillColor = "coral", #let's use a different color for Canada...
+              fillOpacity = 0.6,
+              highlightOptions = highlightOptions(
+                weight=3.5,
+                color="salmon", #and have a different highlight border color
+                fillOpacity = .5,
+                dashArray = 0,
+                bringToFront = TRUE),
+              label=province_labels) #use the Canadian province labels
+
+
+```
+
+#### Incorporating the two functions 
+
+In this section, I demonstrate how to incorporate two useful Leaflet functions, addMeasure() and addSearchOSM(), into a Leaflet map created with R. addMeasure() adds a distance measurement tool to the map, which allows users to measure distances between different points on the map. addSearchOSM() adds a search box to the map, which allows users to search for specific addresses or locations on the map. I first convert my data to an sf object and remove any rows with missing longitude or latitude data. 
+
+Then, I create a Leaflet map using my filtered data, add markers to the map, and finally add the addMeasure() and addSearchOSM() functions to the map. The end result is an interactive map that allows users to search for specific locations and measure distances between different points.
+
+```{r}
+# Convert to sf object
+# Remove rows with missing longitude or latitude
+Joined_filtered <- Joined_filtered %>%
+  drop_na(longitude, latitude)
+
+Joined_filtered_sf <- Joined_filtered %>%
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326)
+
+# Create a leaflet map
+map <- leaflet(Joined_filtered_sf) %>%
+  addTiles() %>%
+  addMarkers(data = Joined_filtered)
+
+# Add measure control to the map
+map <- map %>% addMeasure()
+
+# Add search box to the map
+map <- map %>% addSearchOSM()
+
+# Print the map
+map
+```
+
