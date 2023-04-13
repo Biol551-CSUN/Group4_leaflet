@@ -1,0 +1,74 @@
+---
+title: "Helia_leaflet_markdown"
+author: "Helia Tehrani"
+date: "2023-04-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE,
+                      fig.path = "../Output/")
+```
+
+# loading libraries
+```{r}
+library(tidyverse)
+library(here)
+library(dplyr)
+library(sf)
+library(leaflet)
+library(readr)
+```
+# Read in Data
+```{r, read in data}
+feederwatch <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-01-10/PFW_2021_public.csv')
+site_data <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-01-10/PFW_count_site_data_public_2021.csv')
+```
+# Create a choropleth map using Leaflet
+
+```{r, choropleth-map}
+map <- leaflet(bird_data) %>%
+  addTiles() %>%
+  addProviderTiles(providers$Esri.WorldTopoMap) %>%
+  setView(-96, 37, zoom = 4) %>%
+  addPolygons(data = us_states,
+              fillColor = "grey",
+              weight = 2,
+              opacity = 1,
+              color = "green") %>%
+  addCircleMarkers(radius = ~ sqrt(observations) * 10,
+                   stroke = FALSE,
+                   fillOpacity = 0.75,
+                   color = ~pal(species),
+                   group = ~species,
+                   popup = ~paste("<strong>Species:</strong> ", species,
+                                  "<br><strong>Location:</strong> ", location,
+                                  "<br><strong>Abundance:</strong> ", observations))
+```
+
+# Add hover-over tooltips
+
+```{r, hover-tools}
+map %>% addTiles() %>%
+  addProviderTiles(providers$Esri.WorldTopoMap) %>%
+  setView(-96, 37, zoom = 4) %>%
+  addPolygons(data =ca_state,
+              color="cyan",
+              weight=3,
+              opacity=1,
+              dashArray = 2.5,
+              smoothFactor = 1,
+              fillColor = "grey",
+              fillOpacity = 0.6,
+              highlightOptions = highlightOptions(
+                weight=3.5,
+                color="pink",
+                fillOpacity = 0.4,
+                dashArray = 0,
+                bringToFront = TRUE),
+              label=species)                                
+
+```
+
