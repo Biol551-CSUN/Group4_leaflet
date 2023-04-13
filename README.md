@@ -1,9 +1,6 @@
 # Group-4: Leaflet Package
 This is our repository for Avetis, Cindy, Jesse, Caroline, and Helia.
 
-### Project Description: 
-TDB
-
 ### Contributions by group member and their assigned function:
   - *Avetis*: Used "addProviderTiles", allowing you to add third-party tiles (AKA basemamps). Used "addLayerControls", allowing the user to have an interactive UI to select which provider tiles they want to use. Used "addControl", allowing the user to add a descriptive text box to a corner of the map.
   
