@@ -21,6 +21,11 @@ rmarkdown::render("Group4_leaflet_part2.Rmd")
 rmarkdown::merge("Group_4_Leaflet_part1.html", "Group4_leaflet_part2.html", output_file = "Group4_leaflet_combined.html")
 ```
 
+```{r}
+rmarkdown::render("Group4_leaflet_combined.Rmd")
+
+```
+
 # Description
 
 This is a combined document that includes content from two separate R Markdown files.
